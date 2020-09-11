@@ -1,0 +1,171 @@
+<!DOCTYPE html><html lang = "en-US"> 
+<head> <meta charset = "utf-8"> 
+  <title>harbison data</title> 
+  <style >
+    hr   { width:70% ; text-align:left ; margin-left:0 }
+    body { background-image:    url('wordCloud.png') ; 
+           background-repeat:   no-repeat    ;
+           background-position: right top    ;
+           background-size: 30%  270px       ;         }
+    table, th, td { border: 1px solid red    ; 
+                    border-collapse:collapse ;         }
+  </style>
+</head>
+<body onload = "initLoad()">
+  <div>
+    <h1>Mark Harbison</h1>
+    <h3>data entry | data analyst | R, SQL, Python</h3>
+    <p>
+      c: 916-475-9461                                 &nbsp; | &nbsp; 
+      <a href = "mailto:mark.f.harbison@gmail.com" 
+        target = "_top">mark.f.harbison@gmail.com</a> &nbsp; | &nbsp; 
+      <a href = "http://www.harbison.one/index2019.html">Resume + more examples</a>
+    </p> 	 
+  </div>
+  <hr>
+  <!-- hr style = "" -->
+  <script>                                          //  only these 2 elements need help initializing on 1st load 
+    function initLoad() {
+      if( !sessionStorage.getItem("visit") )             {  
+          //  alert("1st visit") ;  
+        document.getElementById('strt').value = "1966" ; 
+        document.getElementById('endd').value = "2021" ; 
+        sessionStorage.setItem("visit", new Date()) ;    }    //  strt = 'from' ,  endd = 'to' 
+    } ;
+    function SetOpt() {                             //  called only after all html elements are built
+      document.getElementById(  'strt').value
+           = "<?php echo $_POST['strt'] ?>" ;        
+      document.getElementById(  'endd').value        
+           = "<?php echo $_POST['endd'] ?>" ;  
+      document.getElementById('psStr').innerHTML    //  display prev. search string
+           = '&nbsp; prev. search = ' + 
+             "<?php echo $_POST['srchBox'] ?>" ;  
+      var x = document.getElementsByName("rb") ;    //  single byId, plural byName
+      if( "<?php echo $_POST['rb'] ?>" == "tpc" ) {
+             x[0].checked = true ; }                //  radio btn persists  on 2+ loads
+      else { x[1].checked = true ; }                //  ok if no default rb on 1st load
+    } ;     
+  </script>
+  <p>For example, I entered more than 2700 pages of data and code for this database</p>
+  <strong> &emsp; &emsp; &emsp; &emsp; Enter at least part of the name of a topic or an author 
+    <br/>  as if you were a program chair for a conference on Recreational Mathematics</strong>
+  <br/>  <br/>                                                 <!-- 'form' is closed at end    -->
+  <form     action = "<?php echo $_SERVER['PHP_SELF'] ?>" method = "POST">
+    <table  border = "0" style = "border: 0px">
+      <tr>                                                     <!-- 1st ROW -->
+        <td border = "0" style = "border: 0px">
+          <label for = "strt">From:</label>
+          <input type = "number" id = "strt" name = "strt" 
+                  min = "1966"  max = "2021" tabindex = '1' >  <!-- 'from' -->
+        </td>
+        <td border = "0" style = "border: 0px">  
+          <label><input type = "radio" name = "rb" tabindex = '3'            
+                       value = "tpc">by Topic</label>          <!-- ok for dup 'name' but not 'id' --> 
+        </td>
+        <td border = "0" style = "border: 0px" rowspan = "2">  <!-- 2 rows combined   -->
+          <input  type = "text"   name = "srchBox" tabindex = '4'>
+          <button type = "submit" name = "sbmtBtn" tabindex = '5'> Go </button>
+          <span id = "psStr"></span>                           <!-- prev. search Str -->
+        </td>                                                  <!-- 3 items in 1 cell -->
+      </tr>
+      <tr>                                                     <!-- 2nd ROW -->
+        <td border = "0" style = "border: 0px">
+          <label for = "endd">To: &nbsp; &nbsp; </label>
+          <input type = "number" id = "endd" name = "endd" 
+                  min = "1966"  max = "2021" tabindex = '2'>   <!-- 'to' -->
+        </td>
+        <td border = "0" style = "border: 0px">  
+          <label><input type = "radio" name = "rb"             
+                       value = "aut">by Author &nbsp;</label>  <!-- not tabbable separately from 1st 'rb' -->
+        </td>
+      </tr>
+    </table>
+    <br/>
+  </form>
+<?php  
+try {
+  if( isset( $_POST['sbmtBtn'] ) )   {   
+    if( empty( $_POST['srchBox'] ) )   { echo 'at least 1 character is required' ; }    
+else {                                                                 //  Do not print main tbl if empty str
+  $strtN   = (isset($_POST['strt']) ? $_POST['strt'] : null) ; 
+  $enddN   = (isset($_POST['endd']) ? $_POST['endd'] : null) ; 
+  if( $strtN > $enddN ) { echo "'From' can not be more than 'To'" ; }  //  large block.  Two 'end else's at the end.      
+  else {
+    include( substr($_SERVER['DOCUMENT_ROOT'], 0, 
+      strlen("harbison.one") )."configRMdb.txt" ) ;                    //  $svr, $unm, $pwd, $dnm
+    class foo_mysqli extends mysqli {
+      public function __construct($host, $user, $pass, $db) {
+              parent::__construct($host, $user, $pass, $db) ;
+        if (mysqli_connect_error()) {
+          die('Connect Error ('. mysqli_connect_errno() .') '. mysqli_connect_error()) ;
+        }
+      }
+    }
+    $mq = new foo_mysqli( $svr, $unm, $pwd, $dnm ) ;
+    $mq -> set_charset("utf8mb4") ;                                   //  no 'mysqli::...'
+    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT) ;       //  'exception handling' (better than error hdlg) 
+    $hazStr  = $_POST['srchBox'] ;                                    //  potentially hazardous before sanitization
+    $srchStr = $mq -> real_escape_string( $hazStr ) ; 
+    $whatt   = "SELECT yr, title, author, other_info   FROM jrecmath.allr WHERE " ; 
+    $what2   = "SELECT COUNT(DISTINCT sources) AS 'ct' FROM jrecmath.allr WHERE " ;  
+    $what3   = "SELECT DISTINCT sources                FROM jrecmath.allr WHERE " ;  //  no dups
+    if( !isset( $_POST['rb'] )) { echo "Loading error.  Try 'refresh'" ; exit() ; }
+    elseif( $_POST['rb'] == "tpc" ) { 
+      $whenn = " AND (yr BETWEEN $strtN AND $enddN) ORDER by title, author, yr" ;
+      $sq1   = $whatt . "(title  LIKE '%$srchStr%')" . $whenn ;          //  big table
+      $sq2   = $what2 . "(title  LIKE '%$srchStr%')" . $whenn ;          //  n of source(s)
+      $sq3   = $what3 . "(title  LIKE '%$srchStr%')" . $whenn ; }        //  source list
+    elseif( $_POST['rb'] == "aut" ) { 
+      $whens = " AND (yr BETWEEN $strtN AND $enddN) ORDER by author, yr, title" ;
+      $sq1   = $whatt . "(author LIKE '%$srchStr%')" . $whens ; 
+      $sq2   = $what2 . "(author LIKE '%$srchStr%')" . $whens ; 
+      $sq3   = $what3 . "(author LIKE '%$srchStr%')" . $whens ; }
+    if( !$rslt1 = $mq -> query( $sq1 ) )                            {  //  big table sql
+      echo "Query: ". $sq1 ."<br/>"."Errno: ". $mq -> errno ."\n" ; }
+    if( !$rslt2 = $mq -> query( $sq2 ) )                            {  //  n of sources sql
+      echo "Query: ". $sq2 ."<br/>"."Errno: ". $mq -> errno ."\n" ; }
+    if( !$rslt3 = $mq -> query( $sq3 ) )                            {  //  the source list sql
+      echo "Query: ". $sq3 ."<br/>"."Errno: ". $mq -> errno ."\n" ; }
+
+    if( $rslt1 -> num_rows === 0 )  { 
+      echo "there are no results" ; }                         //  skip the fieldName tbl headers if 0 data
+    else { print "<table><tr>
+             <th style = 'width:50px'>Year </th>
+             <th>Title (topic)             </th>
+             <th>Author                    </th>
+             <th>Other Info.               </th></tr> " ;
+    }                                                        //  yr = the only fieldNm that req. min width
+    while( $dRow = $rslt1 -> fetch_assoc() ) { 
+      print " <tr> ";
+      foreach ( $dRow as $value )        {
+             print " <td>$value</td> ";  }           //  end field  loop (inner)
+      print " </tr> ";
+    }                                                //  end record loop (outer)
+    print "</table>" ;                               //  end of the big table  
+
+    if( $rslt2 -> num_rows > 0 )  {                  //  start 'Source' v. 'Sources' v. blank word 
+      if( $dRow = $rslt2 -> fetch_assoc() ) {
+        if( $dRow['ct'] > 0 ) { 
+          print "</br><strong>" ;                      
+          if( $dRow['ct'] == 1 ) {
+                 print "Source </strong></br> "; }    
+          else { print "Sources</strong></br> "; }  }  }
+    }                                                //  end of 'Source' v. 'Sources'
+
+    if( $rslt3 -> num_rows > 0 )  {                  //  start of the 'sources' printout
+      while( $dRow = $rslt3 -> fetch_assoc() ) {
+        foreach (  $dRow as $valu3 )        {        //  ok w/ 2 loops + just 1 field
+          print " * &nbsp;  $valu3 </br> "; }        //  end field loop
+      }                                              //  end record loop 
+    }                                                //  end 'sources' list
+
+    $rslt1 -> free_result() ; $rslt2 -> free_result() ; $rslt3 -> free_result() ;
+    $mq -> close() ;
+      }                       //  end 2nd-to-top else
+    }                         //  end top else
+  }                           //  end isset
+}                             //  end try
+  catch( Exception $e ) { echo 'ERROR: '. $e -> getMessage() .'<br>' ; }
+?>
+  <script>  SetOpt() ;  </script>          <!--  Set the user-made Options for the next reload  -->
+</body></html>
